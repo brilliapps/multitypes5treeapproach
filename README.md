@@ -1,5 +1,7 @@
 # multitypes5treeapproach
 
+https://github.com/brilliapps/multitypes5treeapproach/blob/main/examplesimplified.dart
+
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 /// Bool version of bool is not used it spares much trouble and basically fulfills it's function
