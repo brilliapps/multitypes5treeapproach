@@ -26,6 +26,9 @@
 /// LEGEND FOR REPLACING:
 ///   Str may mean StrStrict, Int - IntStrict, etc.
 ///   /*t*/int/*=t*/ Change into Int - bool for now not implemented
+///   U (probably a method/getter return Type only), W (a probably method param only) is used by NumStrict in relation to Int(...Strict), Dbl(...Strict) classes which require specific params for overriden methods and return f.e. U=Int if object is Int, but accepts a param W=Int, f.e. usually, Dbl however returns U, and accepts W correspondingly which means that W=Dbl or W=Int bugt W!=Num,
+///   /*u*/ num/*=u*/ /*w*/ num/*=w*/ - used in NumStrict - this should be changed to generic type letters U, and W correspondingly - Dbl class will accept no Num
+///   /*numasu*/ it casts as U the return type most probably related to /*u*/ num/*=u*/.
 ///   !!! Important for the below: before changing cstring first change nested cstring2 like /*cstring2*/ nmatch /*c2*/: probably only one case
 ///   /*cstring*/'some string or String variable or return method call'/*c*/ Str('some string or String variable or return method call')
 ///    other/*b*/ ; change to other.base for original simple type value num, int, String, possibly more
@@ -73,6 +76,18 @@
 /// Dbl
 /// \/\*t\*\/[\s\t\n\r]*Object[\s\t\n\r]*\/\*[=]t\*\/
 /// Obj
+///
+/// /*u*/ num/*=u*/ \/\*u\*\/[\s\t\n\r]*num[\s\t\n\r]*\/\*[=]u\*\/
+/// U
+///
+/// /*w*/ num/*=w*/ \/\*u\*\/[\s\t\n\r]*num[\s\t\n\r]*\/\*[=]w\*\/
+/// W
+///
+/// \/\*numasu\*\/
+/// as U
+///
+///
+///
 ///
 /// ///    other/*b*/ ; change to other.base for original simple type value num, int, String, possibly more
 /// [\s\t\r\n]*\/\*b\*\/
@@ -236,6 +251,7 @@ class ObjStrict<T extends Object, U extends ObjStrict<Object, dynamic>> {
       ]) /*c*/;
 }
 
+/// As of now when Strict is changed into non-Strict version Bool is dropped, only native bool is to be used which spares much trouble String, num, int, double are much more practical used not recommended to be used.
 class BoolStrict extends ObjStrict<bool, BoolStrict> {
   const BoolStrict(super.base);
 
@@ -267,7 +283,8 @@ class BoolStrict extends ObjStrict<bool, BoolStrict> {
 }
 
 /// Do understand if num is num or num is always double or int. For now let's do something like this; check int/double inheriting rules.
-class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
+class NumStrict<T extends num, U extends NumStrict<num, dynamic, dynamic>,
+        W extends NumStrict<num, dynamic, dynamic>>
     extends ObjStrict<T, U> /* implements Comparable<T>*/ {
   const NumStrict(super.base);
 
@@ -287,22 +304,126 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   @override
   Type get runtimeType => base.runtimeType;
 
-  /*t*/ num/*=t*/ get sign => /*cnum*/ base.sign /*c*/;
+  /*u*/ num/*=u*/ get sign => /*cnum*/ base.sign /*c*/ /*numasu*/;
 
   // Methods
 
-  /*t*/ num/*=t*/ abs() => /*cnum*/ base.abs() /*c*/;
+  /*u*/ num/*=u*/ abs() => /*cnum*/ base.abs() /*c*/ /*numasu*/;
 
   /*t*/ int/*=t*/ ceil() => /*cint*/ base.ceil() /*c*/;
 
   /*t*/ double/*=t*/ ceilToDouble() => /*cdouble*/ base.ceilToDouble() /*c*/;
 
-  /*t*/ num/*=t*/ clamp(
-          /*t*/ num/*=t*/ lowerLimit, /*t*/ num/*=t*/ upperLimit) =>
-      /*cnum*/ base.clamp(lowerLimit /*b*/, upperLimit /*b*/) /*c*/;
+  /// FIXME: Copy all here to github repo with tips
+  /// // The bottom line - int accepts int returns int, double accepts int or double but not num!!! and returns double
+  /// // num is default and allowed - no int or double required:
+  /// class Fq<T extends num> {
+  ///         final T base;
+  ///         const Fq(this.base);
+  ///         // Implementation goes here...
+  ///         String toString() => "Instance of 'Foo<$T>'";
+  ///       }
+  ///
+  ///
+  /// void main() {
+  ///   num werwrerte=5.5;
+  ///   // default bottom type num and also can be passed num, so not int or double is required
+  ///   Fq<num>(werwrerte);
+  /// }
+  ///
+  /// however we need to accept Num for Dbl because it couldn't be overriden, yet thinking
+  /// SO WE [Edit: don't have to] HAVE TO OVERRITE clamp for double but here it must return U so that there is no error.
+  /// TODO: [Edit: ] we need to add a third fourth W, X generic params instead for being strict or now and for int W, X will be bound to int, Int, but for double W, X will be bound to Num
+  /// FIXME: to the Edit just above: notice that double does't accept num, but here Dbl will accept Num as param, but the returned value will be correct type.
+  ///
+  /// below IntStrict accepts int only in some cases,
+  /// class IntStrict
+  ///  extends IntOrDoubleStrict<int, IntStrict, IntStrict>
+  ///
+  /// /// Now double can accept ints but not nums also for methods like clamp that have num as param but are overriden in double class also won't allow num while officially num is allowed
+  /// /// To copy the behaviour or not accepting the null itself we now have a class That is before double and num so is not num:
+  /// /// DblStrict is to accept num but it throws if num is passed, to copy the normal behaviour
+  /// /// See the part num, IntOrDoubleStrict - it is not "num, NumStrict"
+  /// class DblStrict
+  ///  extends IntOrDoubleStrict<double, DblStrict, IntOrDoubleStrict>
+  ///
+  /// end of FIXME:
+  ///
+  ///
+  ///
+  /// // exhaustiveness below calling examples all num, int, double pass the function
+  /// sdfgdgsdfg(num abc) {
+  ///   // only this is good
+  ///   switch(abc) {
+  ///     case int(): break;
+  ///     case double(): break;
+  ///   }
+  ///   // only this is good
+  ///   switch(abc) {
+  ///     case num(): break;
+  ///   }
+  ///   // good but int must be first
+  ///   switch(abc) {
+  ///     case int(): break;
+  ///     case num(): break;
+  ///   }
+  ///   // good but int never reached
+  ///   switch(abc) {
+  ///     case num(): break;
+  ///     case int(): break;
+  ///   }
+  /// }
+  /// gdgfhdfhgfh(){
+  ///   sdfgdgsdfg(2.2 as num);
+  ///   sdfgdgsdfg(2.2);
+  ///   sdfgdgsdfg(10);
+  ///
+  /// }
+  ///
+  ///
+  ///
+  ///
+  /// // yes:
+  /// num werwer = 0; // not cast into int or something - it is still null
+  /// // yes:
+  /// num werwer2 = werwer * 12.2;
+  /// // no: int wer=10.clamp(5, 8.7);
+  /// // no: int wer=5.5.clamp(5, 10);
+  /// // yes
+  /// int wer = 10.clamp(5, 10);
+  /// // also no:
+  /// // int wer2 = 4.clamp(5, 8.7);
+  /// // so clamp for int must be accept int, double num
+  /// double wer4 = 2.2.clamp(5, 8.7);
+  /// // no: double wer33 = 2 as num;
+  /// // no like previous: double wer5 = 1.1.clamp(2, wer3);
+  ///
+  ///
+  /// // Let's repeat it (+1 extra) for Num, Dbl, Int
+  ///
+  /// // no: Int werRR=Int(10).clamp(Int(5), Dbl(8.7));
+  /// // no: Int werwww=Dbl(5.5).clamp(Int(5), Int(10));
+  /// // yes
+  /// Int werR = Int(10).clamp(Int(5), Int(10));
+  /// // also no:
+  /// // Int wer2=Int(4).clamp(Int(5), Dbl(8.7));
+  /// // so clamp for int must be accept int, double num
+  /// Dbl wer4R = Dbl(2.2).clamp(Int(5), Dbl(8.7));
+  /// // no: Dbl wer33 = Int(2) as Num; // also no as Int, only as Dbl works
+  /// // nolike previous (wer33 must have been Num for a while): Dbl wer5 = Dbl(1.1).clamp(Int(2), wer3);
+  /// // But this extra one more unique not copied works as wanted:
+  /// Dbl wer5 = Dbl(1.1).clamp(Int(2), (Int(2) as Num) as Dbl);
+  ///
+  ///
+  ///
+  ///
+  /*u*/ num/*=u*/ clamp(
+          /*w*/ num/*=w*/ lowerLimit, /*w*/ num/*=w*/ upperLimit) =>
+      /*cnum*/ base.clamp(lowerLimit /*b*/, upperLimit /*b*/) /*c*/ /*numasu*/;
 
   @override
-  /*t*/ int/*=t*/ compareTo(/*t*/ num/*=t*/ other) => /*cint*/
+  /*t*/ int/*=t*/ compareTo(/*w*/ num/*=w*/ other) => /*cint*/
+
       base.compareTo(other /*b*/) /*c*/;
 
   /*t*/ int/*=t*/ floor() => /*cint*/ base.floor() /*c*/;
@@ -312,8 +433,8 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   @override
   dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
 
-  /*t*/ num/*=t*/ remainder(/*t*/ num/*=t*/ other) => /*cnum*/
-      base.remainder(other /*b*/) /*c*/;
+  /*u*/ num/*=u*/ remainder(/*w*/ num/*=w*/ other) => /*cnum*/
+      base.remainder(other /*b*/) /*c*/ /*numasu*/;
 
   /*t*/ int/*=t*/ round() => /*cint*/ base.round() /*c*/;
 
@@ -400,8 +521,16 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   }
 }
 
-class IntStrict
-    extends NumStrict<int, IntStrict> /* implements Comparable<int>*/ {
+sealed class IntOrDoubleStrict<
+        T extends num,
+        U extends NumStrict<num, dynamic, dynamic>,
+        W extends NumStrict<num, dynamic, dynamic>>
+    extends NumStrict<T, U, W> /* implements Comparable<T>*/ {
+  const IntOrDoubleStrict(super.base);
+}
+
+class IntStrict extends IntOrDoubleStrict<int, IntStrict,
+    IntStrict> /* implements Comparable<int>*/ {
   const IntStrict(super.base);
 
   /*t*/ int/*=t*/ get bitLength => /*cint*/ base.bitLength /*c*/;
@@ -553,8 +682,8 @@ class IntStrict
   }
 }
 
-class DblStrict
-    extends NumStrict<double, DblStrict> /*implements Comparable<double>*/ {
+class DblStrict extends IntOrDoubleStrict<double, DblStrict,
+    IntOrDoubleStrict> /*implements Comparable<double>*/ {
   const DblStrict(super.base);
 
   @override
@@ -893,27 +1022,655 @@ abstract class MpStrict<K, V> extends ObjStrict<Map<K, V>, MpStrict<K, V>>
 class Obj<T extends Object, U extends Obj<Object, dynamic>> {
   final T base;
   const Obj(this.base);
+
+  @override
+  int get hashCode => base.hashCode;
+
+  @override
+  Type get runtimeType => base.runtimeType;
+
+  // Methods
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
+
+  @override
+  String toString() => base.toString();
+
+  // Operators
+
+  @override
+  bool operator ==(Object other) =>
+      base == (other is Obj ? (other as U).base : other);
+
+  static const sentinelValue =
+      'cust>?om_un!iquE_sEN!tinel7Value10398hwQxm*&^ogoNeverA3535435Use#OnCeUp234onAti*#MeBe345ReasonableNooneCanMakeexactlythe444444samesentineLtext';
+
+  // TODO: do replace and ssave replacement patterns
+  // if it works do 2 simple tests
+  // if adding Int + Int works IntStrict + IntStrict - later think if it is possible to Int inherit from Strict versio - and why
+  // And int + IntStrict when you turn of lint errors if possible
+
+  ///  Don't remove!!! non-formated version of the below method as a source for modifications
+  ///  static int hash(Obj? object1, Obj? object2, [Obj? object3 = Obj.sentinelValue, Obj? object4 = Obj.sentinelValue, Obj? object5 = Obj.sentinelValue, Obj? object6 = Obj.sentinelValue, Obj? object7 = Obj.sentinelValue, Obj? object8 = Obj.sentinelValue, Obj? object9 = Obj.sentinelValue, Obj? object10 = Obj.sentinelValue, Obj? object11 = Obj.sentinelValue, Obj? object12 = Obj.sentinelValue, Obj? object13 = Obj.sentinelValue, Obj? object14 = Obj.sentinelValue, Obj? object15 = Obj.sentinelValue, Obj? object16 = Obj.sentinelValue, Obj? object17 = Obj.sentinelValue, Obj? object18 = Obj.sentinelValue, Obj? object19 = Obj.sentinelValue, Obj? object20 = Obj.sentinelValue]) =>
+  ///  object20 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base,object16.base,object17.base,object18.base,object19.base,object20.base))
+  ///  :object19 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base,object16.base,object17.base,object18.base,object19.base))
+  ///  :object18 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base,object16.base,object17.base,object18.base))
+  ///  :object17 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base,object16.base,object17.base))
+  ///  :object16 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base,object16.base))
+  ///  :object15 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base,object15.base))
+  ///  :object14 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base,object14.base))
+  ///  :object13 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base,object13.base))
+  ///  :object12 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base,object12.base))
+  ///  :object11 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base,object11.base))
+  ///  :object10 == Obj.sentinelValue?Int(Object.hash(object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base,object10.base))
+  ///  :object9 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base,object9.base))
+  ///  :object8 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base,object8.base))
+  ///  :object7 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base,object6.base,object7.base))
+  ///  :object6 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base,object6.base))
+  ///  :object5 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base,object5.base))
+  ///  :object4 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base,object4.base))
+  ///  :object3 == Obj.sentinelValue?Int(Object.hash (object1.base,object2.base,object3.base))
+  ///  :Int(Object.hash(object1.base,object2.base))    ;
+  ///
+  static Int hash(Obj object1, Obj object2,
+          [Obj? object3,
+          Obj? object4,
+          Obj? object5,
+          Obj? object6,
+          Obj? object7,
+          Obj? object8,
+          Obj? object9,
+          Obj? object10,
+          Obj? object11,
+          Obj? object12,
+          Obj? object13,
+          Obj? object14,
+          Obj? object15,
+          Obj? object16,
+          Obj? object17,
+          Obj? object18,
+          Obj? object19,
+          Obj? object20]) =>
+      Int(Object.hash(
+          object1.base,
+          object2.base,
+          object3?.base,
+          object4?.base,
+          object5?.base,
+          object6?.base,
+          object7?.base,
+          object8?.base,
+          object9?.base,
+          object10?.base,
+          object11?.base,
+          object12?.base,
+          object13?.base,
+          object14?.base,
+          object15?.base,
+          object16?.base,
+          object17?.base,
+          object18?.base,
+          object19?.base,
+          object20?.base));
+
+  // TODO: can be optimised but need to get info runtimeType is Exactly iterable with "Object?" not ObjStrict for example;
+  static Int hashAll(Iterable<Obj?> objects) => Int(Object.hashAll(
+      [for (Obj? object in objects) object == null ? null : object.base]));
+
+  // TODO: can be optimised but need to get info runtimeType is Exactly iterable with "Object?" not ObjStrict for example;
+  static Int hashAllUnordered(Iterable<Obj?> objects) =>
+      Int(Object.hashAllUnordered([for (Obj? object in objects) object?.base]));
 }
 
 class Bool extends Obj<bool, Bool> {
   const Bool(super.base);
+
+  // Operators
+
+  bool operator &(bool other) => base & other;
+
+  bool operator ^(bool other) => base ^ other;
+
+  bool operator |(bool other) => base | other;
+
+  // static methods
+
+  static bool parse(Str source, {bool caseSensitive = true}) =>
+      bool.parse(source.base, caseSensitive: caseSensitive);
+
+  static bool? tryParse(Str source, {bool caseSensitive = true}) {
+    bool? result = bool.tryParse(source.base, caseSensitive: caseSensitive);
+    return result;
+  }
 }
 
 /// Do understand if num is num or num is always double or int. For now let's do something like this; check int/double inheriting rules.
-class Num<T extends num, U extends Num<num, dynamic>>
+final class Num<T extends num, U extends Num<num, dynamic, dynamic>,
+        W extends Num<num, dynamic, dynamic>>
     extends Obj<T, U> /*implements Comparable<T>*/ {
   const Num(super.base);
+
+  @override
+  int get hashCode => base.hashCode;
+
+  bool get isFinite => base.isFinite;
+
+  bool get isInfinite => base.isInfinite;
+
+  bool get isNaN => base.isNaN;
+
+  bool get isNegative => base.isNegative;
+
+  @override
+  Type get runtimeType => base.runtimeType;
+
+  Num get sign => Num(base.sign);
+
+  // Methods
+
+  Num abs() => Num(base.abs());
+
+  Int ceil() => Int(base.ceil());
+
+  Dbl ceilToDouble() => Dbl(base.ceilToDouble());
+
+  U clamp(W lowerLimit, W upperLimit) =>
+      Num(base.clamp(lowerLimit.base, upperLimit.base)) as U;
+
+  @override
+  Int compareTo(W other) => Int(base.compareTo(other.base));
+
+  Int floor() => Int(base.floor());
+
+  Dbl floorToDouble() => Dbl(base.floorToDouble());
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
+
+  U remainder(W other) => Num(base.remainder(other.base)) as U;
+
+  Int round() => Int(base.round());
+
+  Dbl roundToDouble() => Dbl(base.roundToDouble());
+
+  Dbl toDouble() => Dbl(base.toDouble());
+
+  Int toInt() => Int(base.toInt());
+
+  Str toStringAsExponential([Int? fractionDigits]) =>
+      Str(base.toStringAsExponential(
+          fractionDigits != null ? fractionDigits.base : null));
+
+  Str toStringAsFixed(Int fractionDigits) =>
+      Str(base.toStringAsFixed(fractionDigits.base));
+
+  Str toStringAsPrecision(Int precision) =>
+      Str(base.toStringAsPrecision(precision.base));
+
+  Int truncate() => Int(base.truncate());
+
+  Dbl truncateToDouble() => Dbl(base.truncateToDouble());
+
+// Operators
+
+  Num operator %(Num other) => Num(base % other.base);
+
+  Num operator *(Num other) => Num(base * other.base);
+
+  U operator +(U other) => (Num(base)) as U;
+
+  Num operator -(Num other) => Num(base - other.base);
+
+  Dbl operator /(Num other) => Dbl(base / other.base);
+
+  bool operator <(Num other) => base < other.base;
+
+  bool operator <=(Num other) => base <= other.base;
+
+  //@override
+  //Bool operator ==(Obj other) => Bool(base == other.base);
+
+  bool operator >(Num other) => base > other.base;
+
+  bool operator >=(Num other) => base >= other.base;
+
+  /// Int or IntStrict has more info on this operator unary-();
+  Num operator -() => Num(-base);
+
+  Int operator ~/(Num other) => Int(base ~/ other.base);
+
+  // Static Methods
+
+  static Num parse(Str input, [Num onError(Str input)?]) {
+    //Type type = Int;
+    //if (type is int) {
+    //  return num.parse(input, onError);
+    //} else {
+    // the second param is deprecated - not implemented see the num.parse docs
+    return Num(num.parse(input.base));
+    //}
+
+    //num.parse(input.base, onError) /*c*/;
+  }
+
+  static Num? tryParse(Str input) {
+    // no Num now:
+    num? result = num.tryParse(input.base);
+    return result is num ? Num(result) : null;
+  }
 }
 
-class Int extends Num<int, Int> /* implements Comparable<int>*/ {
+final class IntOrDouble<T extends num, U extends Num<num, dynamic, dynamic>,
+        W extends Num<num, dynamic, dynamic>>
+    extends Num<T, U, W> /* implements Comparable<T>*/ {
+  const IntOrDouble(super.base);
+}
+
+final class Int extends IntOrDouble<int, Int, Int>
+    implements SL2 /* implements Comparable<int>*/ {
   const Int(super.base);
 
+  Int get bitLength => Int(base.bitLength);
+  //int get hashCode => base.hashCode;
+  bool get isEven => base.isEven;
+  //bool get isFinite => base.isFinite;
+  //bool get isInfinite => base.isInfinite;
+  //bool get isNaN => base.isNaN;
+
+  //bool get isNegative => base.isNegative;
+
+  bool get isOdd => base.isOdd;
+
+  //Type get runtimeType => base.runtimeType;
+
+  //int get sign => base.sign;
+
+  // methods
+
+  @override
+  Int abs() => Int(base.abs());
+
+  @override
+  Int ceil() => Int(base.ceil());
+
+  @override
+  Dbl ceilToDouble() => Dbl(base.ceilToDouble());
+
+  //num clamp(num lowerLimit, num upperLimit) =>
+  //    base.clamp(lowerLimit, upperLimit);
+  //
+  //int compareTo(num other) => base.compareTo(other);
+
+  @override
+  Int floor() => Int(base.floor());
+
+  @override
+  Dbl floorToDouble() => Dbl(base.floorToDouble());
+
+  Int gcd(Int other) => Int(base.gcd(other.base));
+
+  Int modInverse(Int modulus) => Int(base.modInverse(modulus.base));
+
+  Int modPow(Int exponent, Int modulus) =>
+      Int(base.modPow(exponent.base, modulus.base));
+
+  //dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
+
+  //num remainder(num other) => base.remainder(other);
+
+  @override
+  Int round() => Int(base.round());
+
+  @override
+  Dbl roundToDouble() => Dbl(base.roundToDouble());
+
+  //double toDouble() => base.toDouble();
+
+  //int toInt() => base.toInt();
+
+  Str toRadixString(Int radix) => Str(base.toRadixString(radix.base));
+
+  Int toSigned(Int width) => Int(base.toSigned(width.base));
+
+  //String toStringAsExponential([int? fractionDigits]) =>
+  //    base.toStringAsExponential(fractionDigits);
+  //
+  //String toStringAsFixed(int fractionDigits) =>
+  //    base.toStringAsFixed(fractionDigits);
+  //
+  //String toStringAsPrecision(int precision) => base.toStringAsFixed(precision);
+
+  Int toUnsigned(Int width) => Int(base.toUnsigned(width.base));
+
+  @override
+  Int truncate() => Int(base.truncate());
+
+  @override
+  Dbl truncateToDouble() => Dbl(base.truncateToDouble());
+
+  // Operators
+
+  //num operator %(num other) => base % other;
+
+  Int operator &(Int other) => Int(base & other.base);
+
+  //num operator *(num other) => base * other;
+
   Int operator +(Int other) => Int(base + other.base);
-  String toString() => base.toString();
+
+  //num operator -(num other) => base - other;
+
+  //double operator /(num other) => base / other;
+
+  //bool operator <(num other) => base < other;
+
+  Int operator <<(Int shiftAmount) => Int(base << shiftAmount.base);
+
+  //bool operator <=(num other) => base <= other;
+  //
+  //bool operator ==(Object other) => base == other;
+  //
+  //bool operator >(num other) => base > other;
+  //
+  //bool operator >=(num other) => base >= other;
+
+  Int operator >>(Int shiftAmount) => Int(base >> shiftAmount.base);
+
+  Int operator >>>(Int shiftAmount) => Int(base >>> shiftAmount.base);
+
+  Int operator ^(Int other) => Int(base ^ other.base);
+
+  /// FIXME: correct? It was int operator unary-() => -base; it is like -(num other) but without params so accepted
+  //int operator -() => -base;
+
+  Int operator |(Int other) => Int(base | other.base);
+
+  /// FIXME: correct?
+  Int operator ~() => Int(~base);
+
+  //int operator ~/(num other) => base ~/ other;
+
+  //// Static Methods
+  //@override
+  static Int parse(Str source, {Int? radix}) =>
+      Int(int.parse(source.base, radix: radix == null ? null : radix.base));
+
+  //@override
+  static Int? tryParse(Str source, {Int? radix}) {
+    int? result =
+        int.tryParse(source.base, radix: radix == null ? null : radix.base);
+    return result is int ? Int(result) : null;
+
+    //Int.tryParse(source, radix: radix);
+  }
 }
 
-class Dbl extends Num<double, Dbl> /*implements Comparable<double>*/ {
+final class Dbl extends IntOrDouble<double, Dbl,
+    IntOrDouble> /*implements Comparable<double>*/ {
   const Dbl(super.base);
+
+  @override
+
+  //Int get hashCode => /*c*/ base.hashCode/*=c*/;
+
+  //Bool get isFinite => /*c*/ base.isFinite/*=c*/;
+  //Bool get isInfinite => /*c*/ base.isInfinite/*=c*/;
+  //Bool get isNaN => /*c*/ base.isNaN/*=c*/;
+  //Bool get isNegative => /*c*/ base.isNegative/*=c*/;
+  @override
+  Type get runtimeType => base.runtimeType;
+
+  //Dbl get sign => /*c*/base.sign/*=c*/;
+
+  // Methods
+
+  @override
+  Dbl abs() => Dbl(base.abs());
+
+  @override
+  Int ceil() => Int(base.ceil());
+
+  @override
+  Dbl ceilToDouble() => Dbl(base.ceilToDouble());
+  //
+  //num clamp(num lowerLimit, num upperLimit) =>
+  //    base.clamp(lowerLimit, upperLimit);
+  //
+  //int compareTo(num other) => compareTo(other);
+  //
+  @override
+  Int floor() => Int(base.floor());
+
+  @override
+  Dbl floorToDouble() => Dbl(base.floorToDouble());
+
+  //dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
+
+  @override
+  Dbl remainder(Num other) => Dbl(base.remainder(other.base));
+
+  @override
+  Int round() => Int(base.round());
+
+  @override
+  Dbl roundToDouble() => Dbl(base.roundToDouble());
+
+  //double toDouble() => base.toDouble();
+
+  //Int toInt() => base.toInt();
+
+  //String toStringAsExponential([int? fractionDigits]) =>
+  //    base.toStringAsExponential(fractionDigits);
+  //
+  //String toStringAsFixed(int fractionDigits) =>
+  //    base.toStringAsFixed(fractionDigits);
+  //
+  //String toStringAsPrecision(int precision) =>
+  //    base.toStringAsPrecision(precision);
+
+  @override
+  Int truncate() => Int(base.truncate());
+
+  @override
+  Dbl truncateToDouble() => Dbl(base.truncateToDouble());
+
+  // Operators
+
+  @override
+  Dbl operator %(Num other) => Dbl(base % other.base);
+
+  @override
+  Dbl operator *(Num other) => Dbl(base * other.base);
+
+  @override
+  Dbl operator +(Num other) => Dbl(base + other.base);
+
+  @override
+  Dbl operator -(Num other) => Dbl(base - other.base);
+
+  @override
+  Dbl operator /(Num other) => Dbl(base / other.base);
+
+  //bool operator <(num other) => base < other;
+  //
+  //bool operator <=(num other) => base <= other;
+  //
+  //bool operator ==(Object other) => base == other;
+  //
+  //bool operator >(num other) => base > other;
+  //
+  //bool operator >=(num other) => base >= other;
+
+  /// Int or IntStrict had similar situation and see comment there
+  @override
+  Dbl operator -() => Dbl(base);
+
+  @override
+  Int operator ~/(Num other) => Int(base ~/ other.base);
+
+  // Static Methods
+
+  //@override
+  static Dbl parse(Str source) => Dbl(double.parse(source.base));
+
+  //@override
+  static Dbl? tryParse(Str source) {
+    double? result = double.tryParse(source.base);
+    return result == null ? null : Dbl(result);
+  }
+  // Constants
+
+  static const Dbl infinity = Dbl(double.infinity);
+
+  static const Dbl maxFinite = Dbl(double.maxFinite);
+
+  static const Dbl minPositive = Dbl(double.minPositive);
+
+  static const Dbl nan = Dbl(double.nan);
+
+  static const Dbl negativeInfinity = Dbl(double.negativeInfinity);
+}
+
+class Str extends Obj<String, Str> implements /*Comparable<String>, */ Pattern {
+  const Str(super.base);
+
+  // properties
+
+  /*t*/ List/*=t*/ <Int> get codeUnits {
+    Type type = Int;
+    //if (type == int) {
+    //  return base.codeUnits;
+    //} else {
+    List<Int> results = [];
+    for (int unit in base.codeUnits) {
+      results.add(Int(unit));
+    }
+    return results;
+    //}
+  }
+
+  bool get isEmpty => base.isEmpty;
+
+  bool get isNotEmpty => base.isNotEmpty;
+
+  Int get length => Int(base.length);
+
+  Runes get runes => base.runes;
+
+  //Type get runtimeType => base.runtimeType;
+
+  // Methods
+
+  //Iterable<Match> allMatches(String string, [int start = 0]) =>
+  //    base.allMatches(string, start);
+
+  Int codeUnitAt(Int index) => Int(base.codeUnitAt(index.base));
+
+  @override
+  Int compareTo(Str other) => Int(base.compareTo(other.base));
+
+  bool contains(Pattern other, [Int startIndex = const Int(0)]) =>
+      base.contains(other, startIndex.base);
+
+  bool endsWith(Str other) => base.endsWith(other.base);
+
+  Int indexOf(Pattern pattern, [Int start = const Int(0)]) =>
+      Int(base.indexOf(pattern, start.base));
+
+  Int lastIndexOf(Pattern pattern, [Int? start]) =>
+      Int(base.lastIndexOf(pattern, start == null ? null : start.base));
+
+  //Match? matchAsPrefix(String string, [int start = 0]) =>
+  //    base.matchAsPrefix(string, start);
+  //
+  //dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
+  //
+  Str padLeft(Int width, [Str padding = const Str(' ')]) =>
+      Str(base.padLeft(width.base, padding.base));
+
+  Str padRight(Int width, [Str padding = const Str(' ')]) =>
+      Str(base.padRight(width.base, padding.base));
+
+  Str replaceAll(Pattern from, Str replace) =>
+      Str(base.replaceAll(from, replace.base));
+
+  Str replaceAllMapped(Pattern from, Str replace(Match match)) =>
+      Str(base.replaceAllMapped(from, (Match match) => replace(match).base));
+
+  //Str( base.replaceAllMapped(from, replace) );
+
+  Str replaceFirst(Pattern from, Str to, [Int startIndex = const Int(0)]) =>
+      Str(base.replaceFirst(from, to.base, startIndex.base));
+
+  Str replaceFirstMapped(Pattern from, Str replace(Match match),
+          [Int startIndex = const Int(0)]) =>
+      Str(base.replaceFirstMapped(
+          from, (Match match) => replace(match).base, startIndex.base));
+
+  Str replaceRange(Int start, Int? end, Str replacement) =>
+      Str(base.replaceRange(
+          start.base, end == null ? null : end.base, replacement.base));
+
+  /*t*/ List/*=t*/ <Str> split(Pattern pattern) {
+    //Type type = Str;
+    //if (type == String) {
+    //  return base.split(pattern);
+    //} else {
+    List<Str> results = [];
+    for (String unit in base.split(pattern)) {
+      results.add(Str(unit));
+    }
+    return results;
+    //}
+
+    ///base.split(pattern);
+  }
+
+  // FIXME:
+  Str splitMapJoin(Pattern pattern,
+          {Str onMatch(Match)?, Str onNonMatch(Str)?}) =>
+      Str(base.splitMapJoin(pattern,
+          onMatch:
+              onMatch == null ? null : (Match match) => onMatch(match).base,
+          onNonMatch: onNonMatch == null
+              ? null
+              : (String nmatch) => onNonMatch(
+
+                      /*cstring2*/
+
+                      nmatch
+
+                      /*c*/
+
+                      )
+                  .base));
+
+  bool startsWith(Pattern pattern, [Int index = const Int(0)]) =>
+      base.startsWith(pattern, index.base);
+
+  Str substring(Int start, [Int? end]) =>
+      Str(base.substring(start.base, end == null ? null : end.base));
+
+  Str toLowerCase() => Str(base.toLowerCase());
+
+  //String toString() => base.toString();
+
+  Str toUpperCase() => Str(base.toUpperCase());
+
+  Str trim() => Str(base.trim());
+
+  Str trimLeft() => Str(base.trimLeft());
+
+  Str trimRight() => Str(base.trimRight());
+
+  // Operators
+
+  Str operator *(Int times) => Str(base * times.base);
+
+  Str operator +(Str other) => Str(base + other.base);
+
+  Str operator [](Int index) => Str(base[index.base]);
 }
 
 sealed class SL {}
@@ -922,12 +1679,14 @@ sealed class SL1 extends SL {
   SL1();
 }
 
-class SL2 extends SL implements Int {
+sealed class SL2 extends SL implements Num<int, Int, Int> {
   final int base;
   SL2(this.base);
-  Int operator +(Int other) => Int(base + other.base);
-  String toString() => base.toString();
-  int methodUnisqSL12() => 10;
+}
+
+final class SL22 extends SL2 implements Int {
+  SL22(super.base);
+  methodUnisqSL12() {}
 }
 
 final class SL11 extends SL1 {
@@ -967,10 +1726,11 @@ rwewrwerwwrre(SL1 ee) {
 }
 
 rwewrwerwwrreSL2(SL ee) {
-  if (ee is SL2) {
+  if (ee is Int) {
     Int a = Int(10);
     Int(10) + ee as Int;
     a = Int(10) + ee;
+    ee = ee + Int(10);
     print(a);
   }
 
@@ -980,10 +1740,11 @@ rwewrwerwwrreSL2(SL ee) {
       // wrong as expected
       //ee.methodUnisqSL12();
       break;
-    case SL2():
+    case Int():
       // good as expected no need to cast
       print('in switch of rwewrwerwwrreSL2');
-      ee.methodUnisqSL12();
+      // this cannot be used: case is not SL22 BUT IF IT WAS SWITCH WOULDN'T BE EXHAUSTED
+      //ee.methodUnisqSL12();
       Int a = Int(10);
       Int(10) + ee;
       a = Int(10) + ee;
@@ -1027,7 +1788,151 @@ rwewrwerwwrreSL2(SL ee) {
   }
 }
 
+///
+///
+
+ewrwrewrewewrewwer(double q) {}
+ewrwrewrewewrewwer2() {
+  int eeew = 10;
+  // int is not accepted as function param:
+  // ewrwrewrewewrewwer(eeew);
+  // but accepts int:
+  double rtrtr = 10.5 + 5;
+  rtrtr = rtrtr + 2;
+  // but not num
+  // rtrtr = rtrtr + 2 as num;
+}
+
+//class Fq<T extends num> {
+//  final T base;
+//  const Fq(this.base);
+//}
+//
+//sealed class Fqintermediate<T extends num> extends Fq<num> {
+//  const Fqintermediate(super.base);
+//}
+//
+//class Fqint extends Fq<int> {
+//  const Fqint(super.base);
+//}
+//
+//class Fqdouble extends Fq<double> {
+//  const Fqdouble(super.base);
+//}
+
+// exhaustiveness
+sdfgdgsdfg(num abc) {
+  // only this is good
+  switch (abc) {
+    case int():
+      break;
+    case double():
+      break;
+  }
+  // only this is good
+  switch (abc) {
+    case num():
+      break;
+  }
+  // good but int must be first
+  switch (abc) {
+    case int():
+      break;
+    case num():
+      break;
+  }
+  // good but int never reached
+  switch (abc) {
+    case num():
+      break;
+    case int():
+      break;
+  }
+}
+
+gdgfhdfhgfh() {
+  sdfgdgsdfg(2.2 as num);
+  sdfgdgsdfg(2.2);
+  sdfgdgsdfg(10);
+}
+
+asdfasdsadf(Num abc) {
+  switch (abc) {
+    case Int():
+  }
+}
+
+final class A {}
+
+sealed class B extends A {}
+
+final class C extends A {}
+
+// Error: the switch is not exhaustive because there is no case for A()
+void test(A a) => switch (a) {
+      B() => print("B"),
+      C() => print("C"),
+    };
+
 void main() {
+  //num werwrerte=5.5;
+  //Fq<num>(werwrerte);
+
+  // The bottom line - int accepts int returns int, double accepts int or double but not num!!! and returns double
+  // no: int wer=10.clamp(5, 8.7);
+  // no: int wer=5.5.clamp(5, 10);
+  // yes
+  int wer = 10.clamp(5, 10);
+  // also no:
+  // int wer2 = 4.clamp(5, 8.7);
+  // so clamp for int must be accept int, double num
+  double wer4 = 2.2.clamp(5, 8.7);
+  // no: double wer33 = 2 as num;
+  // nolike previous: double wer5 = 1.1.clamp(2, wer3);
+
+  // Let's repeat it (+1 extra) for Num, Dbl, Int
+
+  // no: Int werRR=Int(10).clamp(Int(5), Dbl(8.7));
+  // no: Int werwww=Dbl(5.5).clamp(Int(5), Int(10));
+  // yes
+  Int werR = Int(10).clamp(Int(5), Int(10));
+  // also no:
+  // Int wer2=Int(4).clamp(Int(5), Dbl(8.7));
+  // so clamp for int must be accept int, double num
+  Dbl wer4R = Dbl(2.2).clamp(Int(5), Dbl(8.7));
+  // no: Dbl wer33 = Int(2) as Num; // also no as Int, only as Dbl works
+  // nolike previous (wer33 must have been Num for a while): Dbl wer5 = Dbl(1.1).clamp(Int(2), wer3);
+  // But this unique not copied works:
+  Dbl wer5 = Dbl(1.1).clamp(Int(2), (Int(2) as Num) as Dbl);
+
+  int qqqwer = 10 % 10 /*b*/ /*c*/;
+
+  /// ok but runtime error probably
+  int bbxcvcvc = 10 % 22 /*b*/ /*c*/;
+  // no: int bbxcvcvc=    10 % 10.5 /*b*/ /*c*/;
+
+  double qqqwer3 = 10 % 10 /*b*/ /*c*/;
+
+  /// ok but runtime error probably
+  double bbxcvcvc3 = 10 % 22 /*b*/ /*c*/;
+  double bbxcvcvcw3 = 10 % 10.5 /*b*/ /*c*/;
+  num werwrw = 3;
+
+  /// this wa not taken into account but is ok num is compatible with double:
+  double qqqwer32 = werwrw % 10 /*b*/ /*c*/;
+
+  /// So for dome reason not accepted as param but accepted in operations, hhhmmmmmmmmmmmmmmmmmmmmmmmm
+  //here // READ!!!!! OPERATORS ARE GETTERS SO DIFFERENT TYPES ARE INVOLVED IN double different in num so maybe no ned to override but test?
+  double qqqwer325 = 10.4 % werwrw /*b*/ /*c*/;
+  int jhjgfjjghj = 9 % werwrw; // but num here is not accepted
+
+  Num<num, Num, Num>(21.4);
+
+  // yes:
+  num werwer = 0; // not cast into int or something - it is still null
+  // yes:
+  num werwer2 = werwer * 12.2;
+
   print('Ok, let\'s begin');
   Int a = Int(10);
   Int(10) + a;
@@ -1037,10 +1942,12 @@ void main() {
   /// No - this is what i hoped for:
   //rwewrwerwwrreSL2(Int(15));
 
-  /// No - runtime time exception - this is what i hoped for:
-  ///rwewrwerwwrreSL2(Int(16) as SL2);
-  rwewrwerwwrreSL2(SL2(17));
-  // not allowed rwewrwerwwrreSL2(Int(55) as SL2);
+  /// ALL ALLOWED:
+  /// FIXME: NOT TESTED RUNTIME ERRORS PREVIOUSLY WERE
+  rwewrwerwwrreSL2(Int(16));
+  rwewrwerwwrreSL2(SL22(17));
+  rwewrwerwwrreSL2(Int(55) as SL2);
+  rwewrwerwwrreSL2(SL22(19) as Int);
 
 //  runApp(const MyApp());
 }
