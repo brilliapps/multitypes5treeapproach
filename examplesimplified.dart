@@ -36,23 +36,6 @@
 ///   /*insert*/ /*(Match match) => replace(match).base*/ /*=insert*/  - but you insert instead (regular expressions below)
 ///
 ///
-/// Relevant analysis_options.yaml
-///     inconsistent_inheritance: warning
-///     invalid_override: warning
-/// example o mine yaml (analyzer part):
-/// analyzer:
-/// #  exclude: [build/**]
-/// #  language:
-/// #    strict-casts: true
-/// #    strict-raw-types: true
-///   errors:
-///     inconsistent_inheritance: warning
-///     invalid_override: warning
-///     invalid_use_of_protected_member: error
-///     missing_override_of_must_be_overridden: error
-///     must_call_super: error
-///     #non_constant_identifier_names: error
-///
 /// ==========================================================================
 /// ============ REGEX PATTERNS WITH DESCRIPTOIN =============================
 ///
