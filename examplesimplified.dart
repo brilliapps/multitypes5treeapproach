@@ -1,5 +1,7 @@
 //import 'package:flutter/material.dart';
 
+//import 'package:flutter/material.dart';
+
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 /// Bool version of bool is not used it spares much trouble and basically fulfills it's function
@@ -26,6 +28,9 @@
 /// LEGEND FOR REPLACING:
 ///   Str may mean StrStrict, Int - IntStrict, etc.
 ///   /*t*/int/*=t*/ Change into Int - bool for now not implemented
+///   U (probably a method/getter return Type only), W (a probably method param only) is used by NumStrict in relation to Int(...Strict), Dbl(...Strict) classes which require specific params for overriden methods and return f.e. U=Int if object is Int, but accepts a param W=Int, f.e. usually, Dbl however returns U, and accepts W correspondingly which means that W=Dbl or W=Int bugt W!=Num,
+///   /*u*/ num/*=u*/ /*w*/ num/*=w*/ - used in NumStrict - this should be changed to generic type letters U, and W correspondingly - Dbl class will accept no Num
+///   /*numasu*/ it casts as U the return type most probably related to /*u*/ num/*=u*/.
 ///   !!! Important for the below: before changing cstring first change nested cstring2 like /*cstring2*/ nmatch /*c2*/: probably only one case
 ///   /*cstring*/'some string or String variable or return method call'/*c*/ Str('some string or String variable or return method call')
 ///    other/*b*/ ; change to other.base for original simple type value num, int, String, possibly more
@@ -73,6 +78,18 @@
 /// Dbl
 /// \/\*t\*\/[\s\t\n\r]*Object[\s\t\n\r]*\/\*[=]t\*\/
 /// Obj
+///
+/// /*u*/ num/*=u*/ \/\*u\*\/[\s\t\n\r]*num[\s\t\n\r]*\/\*[=]u\*\/
+/// U
+///
+/// /*w*/ num/*=w*/ \/\*u\*\/[\s\t\n\r]*num[\s\t\n\r]*\/\*[=]w\*\/
+/// W
+///
+/// \/\*numasu\*\/
+/// as U
+///
+///
+///
 ///
 /// ///    other/*b*/ ; change to other.base for original simple type value num, int, String, possibly more
 /// [\s\t\r\n]*\/\*b\*\/
@@ -236,6 +253,7 @@ class ObjStrict<T extends Object, U extends ObjStrict<Object, dynamic>> {
       ]) /*c*/;
 }
 
+/// As of now when Strict is changed into non-Strict version Bool is dropped, only native bool is to be used which spares much trouble String, num, int, double are much more practical used not recommended to be used.
 class BoolStrict extends ObjStrict<bool, BoolStrict> {
   const BoolStrict(super.base);
 
@@ -267,7 +285,8 @@ class BoolStrict extends ObjStrict<bool, BoolStrict> {
 }
 
 /// Do understand if num is num or num is always double or int. For now let's do something like this; check int/double inheriting rules.
-class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
+class NumStrict<T extends num, U extends NumStrict<num, dynamic, dynamic>,
+        W extends NumStrict<num, dynamic, dynamic>>
     extends ObjStrict<T, U> /* implements Comparable<T>*/ {
   const NumStrict(super.base);
 
@@ -287,22 +306,126 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   @override
   Type get runtimeType => base.runtimeType;
 
-  /*t*/ num/*=t*/ get sign => /*cnum*/ base.sign /*c*/;
+  /*u*/ num/*=u*/ get sign => /*cnum*/ base.sign /*c*/ /*numasu*/;
 
   // Methods
 
-  /*t*/ num/*=t*/ abs() => /*cnum*/ base.abs() /*c*/;
+  /*u*/ num/*=u*/ abs() => /*cnum*/ base.abs() /*c*/ /*numasu*/;
 
   /*t*/ int/*=t*/ ceil() => /*cint*/ base.ceil() /*c*/;
 
   /*t*/ double/*=t*/ ceilToDouble() => /*cdouble*/ base.ceilToDouble() /*c*/;
 
-  /*t*/ num/*=t*/ clamp(
-          /*t*/ num/*=t*/ lowerLimit, /*t*/ num/*=t*/ upperLimit) =>
-      /*cnum*/ base.clamp(lowerLimit /*b*/, upperLimit /*b*/) /*c*/;
+  /// FIXME: Copy all here to github repo with tips
+  /// // The bottom line - int accepts int returns int, double accepts int or double but not num!!! and returns double
+  /// // num is default and allowed - no int or double required:
+  /// class Fq<T extends num> {
+  ///         final T base;
+  ///         const Fq(this.base);
+  ///         // Implementation goes here...
+  ///         String toString() => "Instance of 'Foo<$T>'";
+  ///       }
+  ///
+  ///
+  /// void main() {
+  ///   num werwrerte=5.5;
+  ///   // default bottom type num and also can be passed num, so not int or double is required
+  ///   Fq<num>(werwrerte);
+  /// }
+  ///
+  /// however we need to accept Num for Dbl because it couldn't be overriden, yet thinking
+  /// SO WE [Edit: don't have to] HAVE TO OVERRITE clamp for double but here it must return U so that there is no error.
+  /// TODO: [Edit: ] we need to add a third fourth W, X generic params instead for being strict or now and for int W, X will be bound to int, Int, but for double W, X will be bound to Num
+  /// FIXME: to the Edit just above: notice that double does't accept num, but here Dbl will accept Num as param, but the returned value will be correct type.
+  ///
+  /// below IntStrict accepts int only in some cases,
+  /// class IntStrict
+  ///  extends IntOrDoubleStrict<int, IntStrict, IntStrict>
+  ///
+  /// /// Now double can accept ints but not nums also for methods like clamp that have num as param but are overriden in double class also won't allow num while officially num is allowed
+  /// /// To copy the behaviour or not accepting the null itself we now have a class That is before double and num so is not num:
+  /// /// DblStrict is to accept num but it throws if num is passed, to copy the normal behaviour
+  /// /// See the part num, IntOrDoubleStrict - it is not "num, NumStrict"
+  /// class DblStrict
+  ///  extends IntOrDoubleStrict<double, DblStrict, IntOrDoubleStrict>
+  ///
+  /// end of FIXME:
+  ///
+  ///
+  ///
+  /// // exhaustiveness below calling examples all num, int, double pass the function
+  /// sdfgdgsdfg(num abc) {
+  ///   // only this is good
+  ///   switch(abc) {
+  ///     case int(): break;
+  ///     case double(): break;
+  ///   }
+  ///   // only this is good
+  ///   switch(abc) {
+  ///     case num(): break;
+  ///   }
+  ///   // good but int must be first
+  ///   switch(abc) {
+  ///     case int(): break;
+  ///     case num(): break;
+  ///   }
+  ///   // good but int never reached
+  ///   switch(abc) {
+  ///     case num(): break;
+  ///     case int(): break;
+  ///   }
+  /// }
+  /// gdgfhdfhgfh(){
+  ///   sdfgdgsdfg(2.2 as num);
+  ///   sdfgdgsdfg(2.2);
+  ///   sdfgdgsdfg(10);
+  ///
+  /// }
+  ///
+  ///
+  ///
+  ///
+  /// // yes:
+  /// num werwer = 0; // not cast into int or something - it is still null
+  /// // yes:
+  /// num werwer2 = werwer * 12.2;
+  /// // no: int wer=10.clamp(5, 8.7);
+  /// // no: int wer=5.5.clamp(5, 10);
+  /// // yes
+  /// int wer = 10.clamp(5, 10);
+  /// // also no:
+  /// // int wer2 = 4.clamp(5, 8.7);
+  /// // so clamp for int must be accept int, double num
+  /// double wer4 = 2.2.clamp(5, 8.7);
+  /// // no: double wer33 = 2 as num;
+  /// // no like previous: double wer5 = 1.1.clamp(2, wer3);
+  ///
+  ///
+  /// // Let's repeat it (+1 extra) for Num, Dbl, Int
+  ///
+  /// // no: Int werRR=Int(10).clamp(Int(5), Dbl(8.7));
+  /// // no: Int werwww=Dbl(5.5).clamp(Int(5), Int(10));
+  /// // yes
+  /// Int werR = Int(10).clamp(Int(5), Int(10));
+  /// // also no:
+  /// // Int wer2=Int(4).clamp(Int(5), Dbl(8.7));
+  /// // so clamp for int must be accept int, double num
+  /// Dbl wer4R = Dbl(2.2).clamp(Int(5), Dbl(8.7));
+  /// // no: Dbl wer33 = Int(2) as Num; // also no as Int, only as Dbl works
+  /// // nolike previous (wer33 must have been Num for a while): Dbl wer5 = Dbl(1.1).clamp(Int(2), wer3);
+  /// // But this extra one more unique not copied works as wanted:
+  /// Dbl wer5 = Dbl(1.1).clamp(Int(2), (Int(2) as Num) as Dbl);
+  ///
+  ///
+  ///
+  ///
+  /*u*/ num/*=u*/ clamp(
+          /*w*/ num/*=w*/ lowerLimit, /*w*/ num/*=w*/ upperLimit) =>
+      /*cnum*/ base.clamp(lowerLimit /*b*/, upperLimit /*b*/) /*c*/ /*numasu*/;
 
   @override
-  /*t*/ int/*=t*/ compareTo(/*t*/ num/*=t*/ other) => /*cint*/
+  /*t*/ int/*=t*/ compareTo(/*w*/ num/*=w*/ other) => /*cint*/
+
       base.compareTo(other /*b*/) /*c*/;
 
   /*t*/ int/*=t*/ floor() => /*cint*/ base.floor() /*c*/;
@@ -312,8 +435,8 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   @override
   dynamic noSuchMethod(Invocation invocation) => base.noSuchMethod(invocation);
 
-  /*t*/ num/*=t*/ remainder(/*t*/ num/*=t*/ other) => /*cnum*/
-      base.remainder(other /*b*/) /*c*/;
+  /*u*/ num/*=u*/ remainder(/*w*/ num/*=w*/ other) => /*cnum*/
+      base.remainder(other /*b*/) /*c*/ /*numasu*/;
 
   /*t*/ int/*=t*/ round() => /*cint*/ base.round() /*c*/;
 
@@ -400,8 +523,16 @@ class NumStrict<T extends num, U extends NumStrict<num, dynamic>>
   }
 }
 
-class IntStrict
-    extends NumStrict<int, IntStrict> /* implements Comparable<int>*/ {
+sealed class IntOrDoubleStrict<
+        T extends num,
+        U extends NumStrict<num, dynamic, dynamic>,
+        W extends NumStrict<num, dynamic, dynamic>>
+    extends NumStrict<T, U, W> /* implements Comparable<T>*/ {
+  const IntOrDoubleStrict(super.base);
+}
+
+class IntStrict extends IntOrDoubleStrict<int, IntStrict,
+    IntStrict> /* implements Comparable<int>*/ {
   const IntStrict(super.base);
 
   /*t*/ int/*=t*/ get bitLength => /*cint*/ base.bitLength /*c*/;
@@ -553,8 +684,8 @@ class IntStrict
   }
 }
 
-class DblStrict
-    extends NumStrict<double, DblStrict> /*implements Comparable<double>*/ {
+class DblStrict extends IntOrDoubleStrict<double, DblStrict,
+    IntOrDoubleStrict> /*implements Comparable<double>*/ {
   const DblStrict(super.base);
 
   @override
